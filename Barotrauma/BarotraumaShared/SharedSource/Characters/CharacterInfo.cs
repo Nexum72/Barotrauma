@@ -1257,7 +1257,7 @@ namespace Barotrauma
         {
             int prevAmount = ExperiencePoints;
 
-            var experienceGainMultiplier = new AbilityExperienceGainMultiplier(1f);
+            var experienceGainMultiplier = new AbilityExperienceGainMultiplier(4f);
             experienceGainMultiplier.Value += Character?.GetStatValue(StatTypes.ExperienceGainMultiplier) ?? 0;
 
             amount = (int)(amount * experienceGainMultiplier.Value);
