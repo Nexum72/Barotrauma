@@ -121,7 +121,8 @@ namespace Barotrauma.Networking
                         ChatMessageType.Radio : ChatMessageType.Default;
                     client.Character.ShowSpeechBubble(1.25f, ChatMessage.MessageColor[(int)messageType]);
 
-                    client.VoipSound.UseRadioFilter = messageType == ChatMessageType.Radio && !GameSettings.CurrentConfig.Audio.DisableVoiceChatFilters;
+                    client.VoipSound.IsRadio = messageType == ChatMessageType.Radio;
+                    client.VoipSound.UseRadioFilter = client.VoipSound.IsRadio && !GameSettings.CurrentConfig.Audio.DisableVoiceChatFilters;
                     client.RadioNoise = 0.0f;
                     if (messageType == ChatMessageType.Radio)
                     {

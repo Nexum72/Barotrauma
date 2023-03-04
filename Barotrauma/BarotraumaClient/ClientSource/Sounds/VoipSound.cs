@@ -31,6 +31,7 @@ namespace Barotrauma.Sounds
 
         private readonly OpusDecoder decoder;
 
+        public bool IsRadio;
         public bool UseRadioFilter;
         public bool UseMuffleFilter;
 
