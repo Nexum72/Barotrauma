@@ -61,7 +61,7 @@ namespace Barotrauma
             };
 #endif
             Console.WriteLine("Barotrauma Dedicated Server " + GameMain.Version +
-                " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + ")");
+                " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + "), modified by Nexum");
             if (Console.IsOutputRedirected)
             {
                 Console.WriteLine("Output redirection detected; colored text and command input will be disabled.");
@@ -154,7 +154,7 @@ namespace Barotrauma
             sb.AppendLine("\n");
             sb.AppendLine("Barotrauma seems to have crashed. Sorry for the inconvenience! ");
             sb.AppendLine("\n");
-            sb.AppendLine("Game version " + GameMain.Version + " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + ")");
+            sb.AppendLine("Game version " + GameMain.Version + " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + "), modified by Nexum");
             sb.AppendLine("Language: " + GameSettings.CurrentConfig.Language);
             if (ContentPackageManager.EnabledPackages.All != null)
             {
