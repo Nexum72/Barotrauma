@@ -35,6 +35,8 @@ namespace Barotrauma.Sounds
         public bool UseRadioFilter;
         public bool UseMuffleFilter;
 
+        public float RadioFilterScale = 0.0f;
+
         public float Near { get; private set; }
         public float Far { get; private set; }
 
@@ -46,7 +48,9 @@ namespace Barotrauma.Sounds
         {
             new BandpassFilter(VoipConfig.FREQUENCY, 2000)
         };
-        private const float PostRadioFilterBoost = 1.2f;
+        private const float PostRadioFilterBoost = 1.0f;
+        private const float RadioClampMax = 0.3f;
+        private const float RadioClampMin = 0.02f;
 
         private float gain;
         public float Gain
@@ -121,7 +125,9 @@ namespace Barotrauma.Sounds
                 {
                     foreach (var filter in radioFilters)
                     {
-                        fVal = Math.Clamp(filter.Process(fVal) * PostRadioFilterBoost, -1f, 1f);
+                        var radioFilterClamp = RadioClampMax - ((RadioClampMax - RadioClampMin) * RadioFilterScale);
+                        fVal = Math.Clamp(filter.Process(fVal) * PostRadioFilterBoost, radioFilterClamp * -1, radioFilterClamp);
+                        fVal /= MathF.Max(radioFilterClamp, RadioClampMax - ((RadioClampMax - RadioClampMin) * 0.75f));
                     }
                 }
                 buffer[i] = FloatToShort(fVal);

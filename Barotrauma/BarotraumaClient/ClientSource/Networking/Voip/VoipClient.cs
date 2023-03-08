@@ -12,7 +12,7 @@ namespace Barotrauma.Networking
         /// <summary>
         /// The "near" range of the voice chat (a percentage of either SpeakRange or radio range), further than this the volume starts to diminish
         /// </summary>
-        const float RangeNear = 0.4f;
+        const float RangeNear = 0.2f;
 
         private readonly GameClient gameClient;
         private readonly ClientPeer netClient;
@@ -130,8 +130,14 @@ namespace Barotrauma.Networking
                         if (distanceFactor > RangeNear && !spectating)
                         {
                             //noise starts increasing exponentially after 40% range
-                            client.RadioNoise = MathF.Pow(MathUtils.InverseLerp(RangeNear, 1.0f, distanceFactor), 2);
+                            var radioNoiseVol = MathUtils.InverseLerp(RangeNear, 1.0f, distanceFactor);
+                            radioNoiseVol = 0.1f + MathF.Pow(radioNoiseVol + 0.15f, 2);
+                            radioNoiseVol = Math.Clamp(radioNoiseVol, 0.0f, 1.0f);
+                            
+                            client.RadioNoise = radioNoiseVol;
                         }
+
+                        client.VoipSound.RadioFilterScale = Math.Clamp(distanceFactor, 0.0f, 1.0f);
                     }
                     else
                     {

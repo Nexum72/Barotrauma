@@ -77,23 +77,30 @@ namespace Barotrauma.Networking
             Vector3? position = null;
             if (character != null)
             {
-                if (!VoipSound.IsRadio)
+                float dist = Vector3.Distance(new Vector3(character.WorldPosition, 0.0f), GameMain.SoundManager.ListenerPosition);
+                
+                if (VoipSound.IsRadio)
                 {
+                    noiseGain = RadioNoise;
+                    
+                    if (dist > VoipSound.Far)
+                    {
+                        gain = 0.0f;
+
+                        if (dist > VoipSound.Far + 100f)
+                        {
+                            noiseGain = 0.0f;
+                        }
+                    }
+                } else {
                     if (GameSettings.CurrentConfig.Audio.UseDirectionalVoiceChat)
                     {
                         position = new Vector3(character.WorldPosition.X, character.WorldPosition.Y, 0.0f);
                     }
                     else
                     {
-                        float dist = Vector3.Distance(new Vector3(character.WorldPosition, 0.0f), GameMain.SoundManager.ListenerPosition);
                         gain = 1.0f - MathUtils.InverseLerp(VoipSound.Near, VoipSound.Far, dist);
                     }
-                }
-                
-                if (RadioNoise > 0.0f)
-                {
-                    noiseGain = gain * RadioNoise;
-                    gain *= 1.0f - RadioNoise;
                 }
             }
             VoipSound.SetPosition(position);
