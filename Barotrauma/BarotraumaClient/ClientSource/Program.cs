@@ -163,7 +163,7 @@ namespace Barotrauma
             }
             sb.AppendLine();
             sb.AppendLine("Game version " + GameMain.Version +
-            " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + ")");
+            " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + "), modified by Nexum");
             sb.AppendLine($"Graphics mode: {GameSettings.CurrentConfig.Graphics.Width}x{GameSettings.CurrentConfig.Graphics.Height} ({GameSettings.CurrentConfig.Graphics.DisplayMode})");
             sb.AppendLine("VSync " + (GameSettings.CurrentConfig.Graphics.VSync ? "ON" : "OFF"));
             sb.AppendLine("Language: " + GameSettings.CurrentConfig.Language);

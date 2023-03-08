@@ -290,7 +290,7 @@ namespace Barotrauma
 
 #if UNSTABLE
                 string line1 = "Barotrauma Unstable v" + GameMain.Version;
-                string line2 = "(" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + ")";
+                string line2 = "(" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + "), modified by Nexum";
 
                 Rectangle watermarkRect = new Rectangle(-50, GameMain.GraphicsHeight - 80, 50 + (int)(Math.Max(GUIStyle.LargeFont.MeasureString(line1).X, GUIStyle.Font.MeasureString(line2).X) * 1.2f), 100);
                 float alpha = 1.0f;

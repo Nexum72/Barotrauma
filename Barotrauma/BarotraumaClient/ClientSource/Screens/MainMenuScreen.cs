@@ -1090,7 +1090,7 @@ namespace Barotrauma
             if (selectedTab != Tab.Credits)
             {
 #if !UNSTABLE
-                string versionString = "Barotrauma v" + GameMain.Version + " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + ")";
+                string versionString = "Barotrauma v" + GameMain.Version + " (" + AssemblyInfo.BuildString + ", branch " + AssemblyInfo.GitBranch + ", revision " + AssemblyInfo.GitRevision + "), modified by Nexum";
                 GUIStyle.SmallFont.DrawString(spriteBatch, versionString, new Vector2(HUDLayoutSettings.Padding, GameMain.GraphicsHeight - GUIStyle.SmallFont.MeasureString(versionString).Y - HUDLayoutSettings.Padding * 0.75f), Color.White * 0.7f);
 #endif
                 LocalizedString gameAnalyticsStatus = TextManager.Get($"GameAnalyticsStatus.{GameAnalyticsManager.UserConsented}");
