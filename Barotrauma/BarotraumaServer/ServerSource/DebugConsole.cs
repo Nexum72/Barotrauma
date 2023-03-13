@@ -365,6 +365,34 @@ namespace Barotrauma
                     GameMain.Server.SendConsoleMessage("\"" + args[0] + "\" is not a valid bot spawn mode. (Valid modes are Fill and Normal)", client, Color.Red);
                 }
             });
+            
+            AssignOnExecute("experiencemultiplier", (string[] args) =>
+            {
+                if (args.Length < 1 || GameMain.Server == null) return;
+                if (float.TryParse(args[0], out float experienceMultiplier))
+                {
+                    GameMain.NetLobbyScreen.SetExperienceMultiplier(experienceMultiplier);
+                    NewMessage("Set experience multiplier to " + experienceMultiplier, Color.White);
+                }
+                else
+                {
+                    NewMessage("\"" + args[0] + "\" is not a valid float value.", Color.White);
+                }
+            });
+            AssignOnClientRequestExecute("experiencemultiplier", (Client client, Vector2 cursorPos, string[] args) =>
+            {
+                if (args.Length < 1 || GameMain.Server == null) return;
+                if (float.TryParse(args[0], out float experienceMultiplier))
+                {
+                    GameMain.NetLobbyScreen.SetExperienceMultiplier(experienceMultiplier);
+                    NewMessage(client.Name + " set experience multiplier to " + experienceMultiplier, Color.White);
+                    GameMain.Server.SendConsoleMessage("Set experience multiplier to " + experienceMultiplier, client);
+                }
+                else
+                {
+                    GameMain.Server.SendConsoleMessage("\"" + args[0] + "\" is not a valid float value.", client, Color.Red);
+                }
+            });
 
             AssignOnExecute("killdisconnectedtimer", (string[] args) =>
             {
@@ -1690,6 +1718,24 @@ namespace Barotrauma
                     else
                     {
                         GameMain.Server.SendConsoleMessage("\"" + args[0] + "\" is not a valid bot spawn mode. (Valid modes are Fill and Normal)", client, Color.Red);
+                    }
+                }
+            );
+            
+            AssignOnClientRequestExecute(
+                "experiencemultiplier",
+                (Client client, Vector2 cursorWorldPos, string[] args) =>
+                {
+                    if (args.Length < 1 || GameMain.Server == null) return;
+                    if (float.TryParse(args[0], out float experienceMultiplier))
+                    {
+                        GameMain.NetLobbyScreen.SetExperienceMultiplier(experienceMultiplier);
+                        NewMessage("\"" + client.Name + "\" set experience multiplier to " + experienceMultiplier, Color.White);
+                        GameMain.Server.SendConsoleMessage("Set experience multiplier to " + experienceMultiplier, client);
+                    }
+                    else
+                    {
+                        GameMain.Server.SendConsoleMessage("\"" + args[0] + "\" is not a float value.", client, Color.Red);
                     }
                 }
             );

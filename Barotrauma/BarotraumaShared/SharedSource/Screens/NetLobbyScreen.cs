@@ -89,6 +89,20 @@ namespace Barotrauma
 #endif
         }
 
+        public void SetExperienceMultiplier(float experienceMultiplier)
+        {
+#if SERVER
+            if (GameMain.Server != null)
+            {
+                GameMain.Server.ServerSettings.ExperienceMultiplier = experienceMultiplier;
+                lastUpdateID++;
+            }
+#endif
+#if CLIENT
+            ExperienceMultiplier.FloatValue = experienceMultiplier;
+#endif
+        }
+
         public void SetTraitorsEnabled(YesNoMaybe enabled)
         {
 #if SERVER

@@ -174,6 +174,7 @@ namespace Barotrauma.Networking
                 int traitorSetting = 0,
                 int botCount = 0,
                 int botSpawnMode = 0,
+                float experienceMultiplier = 1.0f,
                 bool? useRespawnShuttle = null)
         {
             if (!GameMain.Client.HasPermission(Networking.ClientPermissions.ManageSettings)) return;
@@ -236,6 +237,7 @@ namespace Barotrauma.Networking
                 outMsg.WriteByte((byte)(traitorSetting + 1));
                 outMsg.WriteByte((byte)(botCount + 1));
                 outMsg.WriteByte((byte)(botSpawnMode + 1));
+                outMsg.WriteSingle(experienceMultiplier);
 
                 outMsg.WriteSingle(levelDifficulty ?? -1000.0f);
 

@@ -341,6 +341,8 @@ namespace Barotrauma
             commands.Add(new Command("botcount", "botcount [x]: Set the number of bots in the crew in multiplayer.", null));
 
             commands.Add(new Command("botspawnmode", "botspawnmode [fill/normal]: Set how bots are spawned in the multiplayer.", null));
+            
+            commands.Add(new Command("experiencemultiplier", "experiencemultiplier [amount]: Set the experience multiplier for mission rewards.", null));
 
             commands.Add(new Command("killdisconnectedtimer", "killdisconnectedtimer [seconds]: Set the time after which disconnect players' characters get automatically killed.", null));
 

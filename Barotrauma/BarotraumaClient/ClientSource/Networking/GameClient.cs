@@ -1965,6 +1965,7 @@ namespace Barotrauma.Networking
 
                             byte botCount = inc.ReadByte();
                             BotSpawnMode botSpawnMode = inc.ReadBoolean() ? BotSpawnMode.Fill : BotSpawnMode.Normal;
+                            float experienceMultiplier = inc.ReadSingle();
 
                             bool autoRestartEnabled = inc.ReadBoolean();
                             float autoRestartTimer = autoRestartEnabled ? inc.ReadSingle() : 0.0f;
@@ -2021,6 +2022,7 @@ namespace Barotrauma.Networking
                                 GameMain.NetLobbyScreen.LevelSeed = levelSeed;
                                 GameMain.NetLobbyScreen.SetLevelDifficulty(levelDifficulty);
                                 GameMain.NetLobbyScreen.SetBotSpawnMode(botSpawnMode);
+                                GameMain.NetLobbyScreen.SetExperienceMultiplier(experienceMultiplier);
                                 GameMain.NetLobbyScreen.SetBotCount(botCount);
                                 GameMain.NetLobbyScreen.SetAutoRestart(autoRestartEnabled, autoRestartTimer);
 

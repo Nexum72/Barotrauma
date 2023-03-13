@@ -16,6 +16,7 @@
     <Command name="autorestarttimer"/>
     <Command name="botcount"/>
     <Command name="botspawnmode"/>
+    <Command name="experiencemultiplier"/>
     <Command name="gamemode"/>
     <Command name="sub"/>
     <Command name="shuttle"/>
@@ -46,6 +47,7 @@
     <Command name="autorestarttimer"/>
     <Command name="botcount"/>
     <Command name="botspawnmode"/>    
+    <Command name="experiencemultiplier"/>    
     <Command name="difficulty"/>
     <Command name="kick"/>
     <Command name="kickid"/>

@@ -1937,6 +1937,7 @@ namespace Barotrauma.Networking
 
                     outmsg.WriteByte((byte)ServerSettings.BotCount);
                     outmsg.WriteBoolean(ServerSettings.BotSpawnMode == BotSpawnMode.Fill);
+                    outmsg.WriteSingle(ServerSettings.ExperienceMultiplier);
 
                     outmsg.WriteBoolean(ServerSettings.AutoRestart);
                     if (ServerSettings.AutoRestart)

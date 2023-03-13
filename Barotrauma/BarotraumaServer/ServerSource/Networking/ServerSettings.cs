@@ -231,6 +231,8 @@ namespace Barotrauma.Networking
                 if (botSpawnMode > 1) { botSpawnMode = 0; }
                 BotSpawnMode = (BotSpawnMode)botSpawnMode;
 
+                ExperienceMultiplier = incMsg.ReadSingle();
+
                 float levelDifficulty = incMsg.ReadSingle();
                 if (levelDifficulty >= 0.0f) { SelectedLevelDifficulty = levelDifficulty; }
 
@@ -436,6 +438,7 @@ namespace Barotrauma.Networking
             GameMain.NetLobbyScreen.MissionTypeName = MissionType;
 
             GameMain.NetLobbyScreen.SetBotSpawnMode(BotSpawnMode);
+            GameMain.NetLobbyScreen.SetExperienceMultiplier(ExperienceMultiplier);
             GameMain.NetLobbyScreen.SetBotCount(BotCount);
 
             MonsterEnabled ??= CharacterPrefab.Prefabs.Select(p => (p.Identifier, true)).ToDictionary();

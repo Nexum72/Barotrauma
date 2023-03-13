@@ -47,6 +47,8 @@ namespace Barotrauma
         private readonly GUIButton[] botSpawnModeButtons;
         private readonly GUITextBlock botSpawnModeText;
 
+        public GUINumberInput ExperienceMultiplier;
+
         public readonly GUIFrame MissionTypeFrame;
         public readonly GUIFrame CampaignSetupFrame;
         public readonly GUIFrame CampaignFrame;
@@ -1196,7 +1198,16 @@ namespace Barotrauma
                     return true;
                 }
             };
-
+            
+            var experienceMultiplierLabel = new GUITextBlock(new RectTransform(new Vector2(1.0f, 0.1f), settingsContent.RectTransform), "XP Multiplier");
+            ExperienceMultiplier = new GUINumberInput(new RectTransform(new Vector2(0.5f, 1.0f), experienceMultiplierLabel.RectTransform, Anchor.CenterRight), NumberType.Float, style: "GUITextBox", textAlignment: Alignment.Center, hidePlusMinusButtons: true);
+            ExperienceMultiplier.OnValueEntered = input =>
+            {
+                GameMain.Client?.ServerSettings.ClientAdminWrite(ServerSettings.NetFlags.Misc, experienceMultiplier: input.FloatValue);
+            };
+            
+            clientDisabledElements.Add(ExperienceMultiplier);
+            
             List<GUIComponent> settingsElements = settingsContent.Children.ToList();
             for (int i = 0; i < settingsElements.Count; i++)
             {
@@ -1349,6 +1360,7 @@ namespace Barotrauma
                 !CampaignFrame.Visible && !CampaignSetupFrame.Visible && GameMain.Client.HasPermission(ClientPermissions.ManageSettings);
             botCountButtons[0].Enabled = botCountButtons[1].Enabled = GameMain.Client.HasPermission(ClientPermissions.ManageSettings);
             botSpawnModeButtons[0].Enabled = botSpawnModeButtons[1].Enabled = GameMain.Client.HasPermission(ClientPermissions.ManageSettings);
+            ExperienceMultiplier.Enabled = GameMain.Client.HasPermission(ClientPermissions.ManageSettings);
 
             autoRestartBox.Enabled = GameMain.Client.HasPermission(ClientPermissions.ManageSettings);
 

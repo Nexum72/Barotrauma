@@ -612,6 +612,13 @@ namespace Barotrauma.Networking
             set;
         }
 
+        [Serialize(1, IsPropertySaveable.Yes)]
+        public float ExperienceMultiplier
+        {
+            get;
+            set;
+        }
+
         [Serialize(false, IsPropertySaveable.Yes)]
         public bool DisableBotConversations
         {

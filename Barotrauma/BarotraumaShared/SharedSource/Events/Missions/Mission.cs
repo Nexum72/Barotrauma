@@ -425,11 +425,13 @@ namespace Barotrauma
 
             int experienceGain = (int)(baseExperienceGain * experienceGainMultiplier.Value);
 #if CLIENT
+            experienceGain *= (int)GameMain.Client.ServerSettings.ExperienceMultiplier;
             foreach (Character character in crewCharacters)
             {
                 GiveMissionExperience(character.Info);
             }
 #else
+            experienceGain *= (int)GameMain.Server.ServerSettings.ExperienceMultiplier;
             foreach (Barotrauma.Networking.Client c in GameMain.Server.ConnectedClients)
             {
                 //give the experience to the stored characterinfo if the client isn't currently controlling a character
