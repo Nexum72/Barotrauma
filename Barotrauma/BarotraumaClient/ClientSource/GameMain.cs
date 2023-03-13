@@ -207,7 +207,7 @@ namespace Barotrauma
         public static bool CancelQuickStart;
 #endif
 
-        public static ChatMode ActiveChatMode { get; set; } = ChatMode.Radio;
+        public static ChatMode ActiveChatMode { get; set; } = ChatMode.Local;
 
         public GameMain(string[] args)
         {

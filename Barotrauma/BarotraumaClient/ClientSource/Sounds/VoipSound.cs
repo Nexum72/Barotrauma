@@ -46,7 +46,7 @@ namespace Barotrauma.Sounds
         };
         private readonly BiQuad[] radioFilters = new BiQuad[]
         {
-            new BandpassFilter(VoipConfig.FREQUENCY, 2000)
+            new BandpassFilter(VoipConfig.FREQUENCY, 1000)
         };
         private const float PostRadioFilterBoost = 1.0f;
         private const float RadioClampMax = 0.3f;
@@ -127,7 +127,7 @@ namespace Barotrauma.Sounds
                     {
                         var radioFilterClamp = RadioClampMax - ((RadioClampMax - RadioClampMin) * RadioFilterScale);
                         fVal = Math.Clamp(filter.Process(fVal) * PostRadioFilterBoost, radioFilterClamp * -1, radioFilterClamp);
-                        fVal /= MathF.Max(radioFilterClamp, RadioClampMax - ((RadioClampMax - RadioClampMin) * 0.75f));
+                        fVal /= MathF.Max(radioFilterClamp, RadioClampMax - ((RadioClampMax - RadioClampMin) * 0.5f));
                     }
                 }
                 buffer[i] = FloatToShort(fVal);

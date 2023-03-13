@@ -613,7 +613,7 @@ namespace Barotrauma
 
             if (Screen.Selected == GameMain.GameScreen && GUI.KeyboardDispatcher.Subscriber == null)
             {
-                if (PlayerInput.KeyHit(InputType.ToggleChatMode))
+                if (PlayerInput.KeyHit(InputType.ToggleChatMode) && GameSettings.CurrentConfig.Audio.VoiceSetting != VoiceMode.Activity)
                 {
                     try
                     {

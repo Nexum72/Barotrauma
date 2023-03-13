@@ -233,16 +233,11 @@ namespace Barotrauma.Networking
                         bool usingRadioMode = PlayerInput.KeyDown(InputType.RadioVoice);
                         if (GameSettings.CurrentConfig.Audio.VoiceSetting == VoiceMode.Activity)
                         {
-                            bool pttDown = (usingLocalMode || usingRadioMode) && GUI.KeyboardDispatcher.Subscriber == null;
-                            if (pttDown)
-                            {
-                                ForceLocal = usingLocalMode;
-                            }
-                            //in Activity mode, we default to the active mode UNLESS a specific ptt key is held
-                            else
-                            {
-                                ForceLocal = GameMain.ActiveChatMode == ChatMode.Local;
-                            }
+                            usingRadioMode = usingRadioMode || PlayerInput.KeyDown(InputType.ToggleChatMode) || PlayerInput.KeyDown(InputType.Voice);
+                            bool radioPttDown = usingRadioMode && GUI.KeyboardDispatcher.Subscriber == null;
+
+                            ForceLocal = !radioPttDown;
+                            
                             if (dB > GameSettings.CurrentConfig.Audio.NoiseGateThreshold)
                             {
                                 allowEnqueue = true;
