@@ -1,4 +1,4 @@
-using Barotrauma.Extensions;
+﻿using Barotrauma.Extensions;
 using Barotrauma.Items.Components;
 using Microsoft.Xna.Framework;
 using System;
@@ -11,11 +11,8 @@ namespace Barotrauma
     class AIObjectiveLoadItem : AIObjective
     {
         public override Identifier Identifier { get; set; } = "load item".ToIdentifier();
-        public override bool IsLoop
-        {
-            get => true;
-            set => throw new Exception("Trying to set the value for AIObjectiveLoadItem.IsLoop from: " + Environment.StackTrace.CleanupStackTrace());
-        }
+
+        protected override bool AllowWhileHandcuffed => false;
 
         private AIObjectiveLoadItems.ItemCondition TargetItemCondition { get; }
         private Item Container { get; }
@@ -24,7 +21,7 @@ namespace Barotrauma
         private ImmutableHashSet<Identifier> ValidContainableItemIdentifiers { get; }
         private static Dictionary<ItemPrefab, ImmutableHashSet<Identifier>> AllValidContainableItemIdentifiers { get; } = new Dictionary<ItemPrefab, ImmutableHashSet<Identifier>>();
 
-        private int itemIndex = 0;
+        private int itemIndex;
         private AIObjectiveDecontainItem decontainObjective;
         private readonly HashSet<Item> ignoredItems = new HashSet<Item>();
         private Item targetItem;
@@ -98,7 +95,7 @@ namespace Barotrauma
                     {
                         foreach (var item in itemContainer.ContainableItems)
                         {
-                            if (CheckStatusEffects(item.statusEffects) == CheckStatus.Finished)
+                            if (CheckStatusEffects(item.StatusEffects) == CheckStatus.Finished)
                             {
                                 return CheckStatus.Finished;
                             }
@@ -161,8 +158,7 @@ namespace Barotrauma
         {
             if (!IsAllowed)
             {
-                Priority = 0;
-                Abandon = true;
+                HandleDisallowed();
                 return Priority;
             }
             else if (!AIObjectiveLoadItems.IsValidTarget(Container, character, targetCondition: TargetItemCondition))
@@ -192,7 +188,10 @@ namespace Barotrauma
                     if (yDist > 100) { dist += yDist * 5; }
                     dist += Math.Abs(character.WorldPosition.X - targetPos.X);
                 }
-                float distanceFactor = dist > 0.0f ? MathHelper.Lerp(0.9f, 0, MathUtils.InverseLerp(0, 5000, dist)) : 0.9f;
+
+                float distanceFactor = 
+                    GetDistanceFactor(targetItem.WorldPosition, verticalDistanceMultiplier: 5, maxDistance: 5000, factorAtMinDistance: 0.9f, factorAtMaxDistance: 0);
+
                 bool hasContainable = character.HasItem(targetItem);
                 float devotion = (CumulatedDevotion + (hasContainable ? 100 - MaxDevotion : 0)) / 100;
                 float max = AIObjectiveManager.LowestOrderPriority - (hasContainable ? 1 : 2);
@@ -219,9 +218,8 @@ namespace Barotrauma
             return Priority;
         }
 
-        public override void Update(float deltaTime)
+        protected override void Act(float deltaTime)
         {
-            base.Update(deltaTime);
             if (targetItem == null)
             {
                 if (character.FindItem(ref itemIndex, out Item item, identifiers: ValidContainableItemIdentifiers, ignoreBroken: false, customPredicate: IsValidContainable, customPriorityFunction: GetPriority))
@@ -233,6 +231,7 @@ namespace Barotrauma
                     }
                     targetItem = item;
                 }
+                objectiveManager.GetObjective<AIObjectiveIdle>().Wander(deltaTime);
                 float GetPriority(Item item)
                 {
                     try
@@ -256,11 +255,7 @@ namespace Barotrauma
                     }
                 }
             }
-        }
-
-        protected override void Act(float deltaTime)
-        {
-            if (targetItem != null)
+            else
             {
                 if(decontainObjective == null && !IsValidContainable(targetItem))
                 {
@@ -290,10 +285,6 @@ namespace Barotrauma
                         Reset();
                     });
             }
-            else
-            {
-                objectiveManager.GetObjective<AIObjectiveIdle>().Wander(deltaTime);
-            }
         }
 
         private bool IsValidContainable(Item item)
@@ -302,15 +293,17 @@ namespace Barotrauma
             if (item.Removed) { return false; }
             if (!ValidContainableItemIdentifiers.Contains(item.Prefab.Identifier)) { return false; }
             if (ignoredItems.Contains(item)) { return false; }
+            if ((item.Illegitimate) == character.IsOnPlayerTeam) { return false; }
             if ((item.SpawnedInCurrentOutpost && !item.AllowStealing) == character.IsOnPlayerTeam) { return false; }
-            var rootInventoryOwner = item.GetRootInventoryOwner();
-            if (rootInventoryOwner is Character owner && owner != character) { return false; }
-            if (rootInventoryOwner is Item parentItem)
+            if (item.GetRootInventoryOwner() is Character owner && owner != character) { return false; }
+            Item parentItem = item.Container;
+            while (parentItem != null)
             {
-                if (parentItem.HasTag("donttakeitems")) { return false; }
+                if (parentItem.HasTag(Tags.DontTakeItems)) { return false; }
+                parentItem = parentItem.Container;
             }
             if (!item.HasAccess(character)) { return false; }
-            if (!character.HasItem(item) && !CanEquip(item)) { return false; }
+            if (!character.HasItem(item) && !CanEquip(item, allowWearing: false)) { return false; }
             if (!ItemContainer.CanBeContained(item)) { return false; }
             if (AIObjectiveLoadItems.ItemMatchesTargetCondition(item, TargetItemCondition)) { return false; }
             if (TargetItemCondition == AIObjectiveLoadItems.ItemCondition.Full)

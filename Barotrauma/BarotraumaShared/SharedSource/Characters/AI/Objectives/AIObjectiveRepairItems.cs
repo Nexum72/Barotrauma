@@ -19,9 +19,9 @@ namespace Barotrauma
         public Item PrioritizedItem { get; private set; }
 
         public override bool AllowMultipleInstances => true;
-        public override bool AllowInAnySub => true;
+        protected override bool AllowInFriendlySubs => true;
 
-        public readonly static float RequiredSuccessFactor = 0.4f;
+        public const float RequiredSuccessFactor = 0.4f;
 
         public override bool IsDuplicate<T>(T otherObjective) => otherObjective is AIObjectiveRepairItems repairObjective && objectiveManager.IsOrder(repairObjective) == objectiveManager.IsOrder(this);
 
@@ -62,7 +62,7 @@ namespace Barotrauma
             }
         }
 
-        protected override bool Filter(Item item)
+        protected override bool IsValidTarget(Item item)
         {
             if (!ViableForRepair(item, character, HumanAIController)) { return false; };
             if (!Objectives.ContainsKey(item))
@@ -74,7 +74,7 @@ namespace Barotrauma
             }
             if (!RelevantSkill.IsEmpty)
             {
-                if (item.Repairables.None(r => r.requiredSkills.Any(s => s.Identifier == RelevantSkill))) { return false; }
+                if (item.Repairables.None(r => r.RequiredSkills.Any(s => s.Identifier == RelevantSkill))) { return false; }
             }
             return !HumanAIController.IsItemRepairedByAnother(item, out _);
         }
@@ -94,7 +94,7 @@ namespace Barotrauma
             return item.Repairables.All(r => !r.IsBelowRepairThreshold);
         }
 
-        protected override float TargetEvaluation()
+        protected override float GetTargetPriority()
         {
             var selectedItem = character.SelectedItem;
             if (selectedItem != null && AIObjectiveRepairItem.IsRepairing(character, selectedItem) && selectedItem.ConditionPercentage < 100)
@@ -102,7 +102,7 @@ namespace Barotrauma
                 // Don't stop fixing until completely done
                 return 100;
             }
-            int otherFixers = HumanAIController.CountCrew(c => c != HumanAIController && c.ObjectiveManager.IsCurrentObjective<AIObjectiveRepairItems>() && !c.Character.IsIncapacitated, onlyBots: true);
+            int otherFixers = HumanAIController.CountBotsInTheCrew(c => c != HumanAIController && c.ObjectiveManager.IsCurrentObjective<AIObjectiveRepairItems>());
             int items = Targets.Count;
             if (items == 0)
             {
@@ -116,7 +116,7 @@ namespace Barotrauma
             }
             else
             {
-                if (anyFixers && (ratio <= 1 || otherFixers > 5 || otherFixers / (float)HumanAIController.CountCrew(onlyBots: true) > 0.75f))
+                if (anyFixers && (ratio <= 1 || otherFixers > 5 || otherFixers / (float)HumanAIController.CountBotsInTheCrew() > 0.75f))
                 {
                     // Enough fixers
                     return 0;

@@ -111,7 +111,7 @@ namespace Barotrauma.Steam
                 {
                     await Task.Yield();
 
-                    string thumbnailUrl = item.PreviewImageUrl;
+                    string? thumbnailUrl = item.PreviewImageUrl;
                     if (thumbnailUrl.IsNullOrWhiteSpace()) { return null; }
                     var client = new RestClient(thumbnailUrl);
                     var request = new RestRequest(".", Method.GET);
@@ -163,7 +163,7 @@ namespace Barotrauma.Steam
                 CrossThread.RequestExecutionOnMainThread(() => ContentPackageManager.LocalPackages.Refresh());
             }
             
-            public static async Task CreatePublishStagingCopy(string modVersion, ContentPackage contentPackage)
+            public static async Task CreatePublishStagingCopy(string title, string modVersion, ContentPackage contentPackage)
             {
                 await Task.Yield();
                 
@@ -184,16 +184,18 @@ namespace Barotrauma.Steam
                     throw new Exception("Staging copy could not be loaded",
                         result.TryUnwrapFailure(out var exception) ? exception : null);
                 }
-                
-                //Load filelist.xml and write the hash into it so anyone downloading this mod knows what it should be
+
+                //Load filelist.xml and write the hash into it so anyone downloading this mod knows what it should be                
                 ModProject modProject = new ModProject(tempPkg)
                 {
-                    ModVersion = modVersion
+                    ModVersion = modVersion,
+                    Name = title,
+                    ExpectedHash = tempPkg.CalculateHash(name: title, modVersion: modVersion)
                 };
                 modProject.Save(stagingFileListPath);
             }
 
-            public static async Task<ContentPackage?> CreateLocalCopy(ContentPackage contentPackage)
+            public static async Task<Option<ContentPackage>> CreateLocalCopy(ContentPackage contentPackage)
             {
                 await Task.Yield();
                 
@@ -232,7 +234,7 @@ namespace Barotrauma.Steam
 
                 RefreshLocalMods();
 
-                return ContentPackageManager.LocalPackages.FirstOrDefault(p => p.UgcId == contentPackage.UgcId);
+                return ContentPackageManager.LocalPackages.FirstOrNone(p => p.UgcId == contentPackage.UgcId);
             }
 
             private struct InstallWaiter
@@ -296,7 +298,7 @@ namespace Barotrauma.Steam
             
             public static void OnItemDownloadComplete(ulong id, bool forceInstall = false)
             {
-                if (!(Screen.Selected is MainMenuScreen) && !forceInstall)
+                if (Screen.Selected is not MainMenuScreen && !forceInstall)
                 {
                     if (!MainMenuScreen.WorkshopItemsToUpdate.Contains(id))
                     {
@@ -304,13 +306,26 @@ namespace Barotrauma.Steam
                     }
                     return;
                 }
-                else if (CanBeInstalled(id)
-                    && !ContentPackageManager.WorkshopPackages.Any(p =>
+                else if (!CanBeInstalled(id))
+                {
+                    DebugConsole.Log($"Cannot install {id}");
+                    InstallWaiter.StopWaiting(id);
+                }
+                else if (ContentPackageManager.WorkshopPackages.Any(p =>
                         p.UgcId.TryUnwrap(out var ugcId)
                         && ugcId is SteamWorkshopId workshopId
-                        && workshopId.Value == id)
-                    && !InstallTaskCounter.IsInstalling(id))
+                        && workshopId.Value == id))
                 {
+                    DebugConsole.Log($"Already installed {id}.");
+                    InstallWaiter.StopWaiting(id);
+                }
+                else if (InstallTaskCounter.IsInstalling(id))
+                {
+                    DebugConsole.Log($"Already installing {id}.");
+                }
+                else
+                {
+                    DebugConsole.Log($"Finished downloading {id}, installing...");
                     TaskPool.Add($"InstallItem{id}", InstallMod(id), t => InstallWaiter.StopWaiting(id));
                 }
             }

@@ -248,12 +248,9 @@ namespace Barotrauma.Networking
                             //in push-to-talk mode, InputType.Voice uses the active chat mode
                             bool usingActiveMode = PlayerInput.KeyDown(InputType.Voice);
                             bool pttDown = (usingActiveMode || usingLocalMode || usingRadioMode) && GUI.KeyboardDispatcher.Subscriber == null;
-                            if (pttDown || captureTimer <= 0)
-                            {
-                                ForceLocal = (usingActiveMode && GameMain.ActiveChatMode == ChatMode.Local) || usingLocalMode;
-                            }
                             if (pttDown)
                             {
+                                ForceLocal = (usingActiveMode && GameMain.ActiveChatMode == ChatMode.Local) || usingLocalMode;
                                 allowEnqueue = true;
                             }
                         }
@@ -271,7 +268,9 @@ namespace Barotrauma.Networking
                         if (GameMain.Client?.Character != null)
                         {
                             var messageType = !ForceLocal && ChatMessage.CanUseRadio(GameMain.Client.Character, out _) ? ChatMessageType.Radio : ChatMessageType.Default;
-                            GameMain.Client.Character.ShowSpeechBubble(1.25f, ChatMessage.MessageColor[(int)messageType]);
+                            if (GameMain.Client.Character.IsDead) { messageType = ChatMessageType.Dead; }
+                            
+                            GameMain.Client.Character.ShowTextlessSpeechBubble(1.25f, ChatMessage.MessageColor[(int)messageType]);
                         }
                         //encode audio and enqueue it
                         lock (buffers)

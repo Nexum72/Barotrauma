@@ -122,7 +122,7 @@ namespace Barotrauma
                 foreach (Affliction affliction in afflictions)
                 {
                     var currentEffect = affliction.GetActiveEffect();
-                    if (currentEffect != null && !string.IsNullOrEmpty(currentEffect.DialogFlag.Value) && !currentFlags.Contains(currentEffect.DialogFlag))
+                    if (currentEffect is { DialogFlag.IsEmpty: false } && !currentFlags.Contains(currentEffect.DialogFlag))
                     {
                         currentFlags.Add(currentEffect.DialogFlag);
                     }
@@ -328,7 +328,7 @@ namespace Barotrauma
             if (checkedSpeakers.Any(s => !potentialSpeaker.CanHearCharacter(s))) { return false; }
 
             //check if the character is close enough to see the rest of the speakers (this should be replaced with a more performant method)
-            if (checkedSpeakers.Any(s => !potentialSpeaker.CanSeeCharacter(s))) { return false; }
+            if (checkedSpeakers.Any(s => !potentialSpeaker.CanSeeTarget(s))) { return false; }
 
             //check if the character has an appropriate personality
             if (selectedConversation.allowedSpeakerTags.Count > 0)

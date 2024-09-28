@@ -243,14 +243,7 @@ namespace Barotrauma.Items.Components
             for (int i = 0; i < labels.Length; i++)
             {
                 labels[i] = i < newLabels.Length ? newLabels[i] : customInterfaceElementList[i].Label;
-                if (Screen.Selected != GameMain.SubEditorScreen)
-                {
-                    customInterfaceElementList[i].Label = TextManager.Get(labels[i]).Fallback(labels[i]).Value;
-                }
-                else
-                {
-                    customInterfaceElementList[i].Label = labels[i];
-                }
+                customInterfaceElementList[i].Label = labels[i];                
             }
             UpdateLabelsProjSpecific();
         }
@@ -306,9 +299,12 @@ namespace Barotrauma.Items.Components
             //make sure the clients know about the states of the checkboxes and text fields
             if (customInterfaceElementList.Any())
             {
-                if (item.Submarine == null || !item.Submarine.Loading)
+                if (item.FullyInitialized)
                 {
-                    item.CreateServerEvent(this);
+                    CoroutineManager.Invoke(() =>
+                    {
+                        if (!item.Removed) { item.CreateServerEvent(this); }
+                    }, delay: 0.1f);
                 }
             }
 #endif

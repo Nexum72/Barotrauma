@@ -47,11 +47,12 @@ namespace Barotrauma
         public void SetOrder(Character orderedCharacter)
         {
             OrderedCharacter = orderedCharacter;
-            if (OrderedCharacter.AIController is HumanAIController humanAI && humanAI.ObjectiveManager.CurrentOrders.None(o => o.MatchesOrder(SuggestedOrder.Identifier, Option)))
+            if (OrderedCharacter.AIController is HumanAIController humanAI && 
+                humanAI.ObjectiveManager.CurrentOrders.None(o => o.MatchesOrder(SuggestedOrder.Identifier, Option) && o.TargetEntity == TargetItem))
             {
                 if (orderedCharacter != CommandingCharacter)
                 {
-                    CommandingCharacter.Speak(SuggestedOrder.GetChatMessage(OrderedCharacter.Name, "", false), minDurationBetweenSimilar: 5);
+                    CommandingCharacter.Speak(SuggestedOrder.GetChatMessage(OrderedCharacter.Name, "", givingOrderToSelf: false), minDurationBetweenSimilar: 5);
                 }
                 CurrentOrder = SuggestedOrder
                     .WithOption(Option)

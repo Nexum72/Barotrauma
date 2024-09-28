@@ -14,6 +14,17 @@ namespace Barotrauma.Networking
             set;
         }
 
+        // Players can boost per-user volume by 200%
+        public const float MaxVoiceChatBoost = 2.0f;
+
+        private float voiceVolume = 1f;
+
+        public float VoiceVolume
+        {
+            get => voiceVolume; 
+            set => voiceVolume = Math.Clamp(value, 0f, MaxVoiceChatBoost);
+        }
+
         private SoundChannel radioNoiseChannel;
         private float radioNoise;
 
@@ -22,7 +33,6 @@ namespace Barotrauma.Networking
             get { return radioNoise; }
             set { radioNoise = MathHelper.Clamp(value, 0.0f, 1.0f); }
         }
-
 
         private bool mutedLocally;
         public bool MutedLocally
@@ -75,7 +85,7 @@ namespace Barotrauma.Networking
             float gain = 1.0f;
             float noiseGain = 0.0f;
             Vector3? position = null;
-            if (character != null)
+            if (character != null && !character.IsDead)
             {
                 float dist = Vector3.Distance(new Vector3(character.WorldPosition, 0.0f), GameMain.SoundManager.ListenerPosition);
                 
@@ -101,6 +111,9 @@ namespace Barotrauma.Networking
                     {
                         gain = 1.0f - MathUtils.InverseLerp(VoipSound.Near, VoipSound.Far, dist);
                     }
+                    
+                    float garbleAmount = ChatMessage.GetGarbleAmount(Character.Controlled, character, ChatMessage.SpeakRangeVOIP);
+                    gain *= 1.0f - garbleAmount;
                 }
             }
             VoipSound.SetPosition(position);
@@ -133,12 +146,12 @@ namespace Barotrauma.Networking
             VoipSound = null;
         }
 
-        public void SetPermissions(ClientPermissions permissions, IEnumerable<string> permittedConsoleCommands)
+        public void SetPermissions(ClientPermissions permissions, IEnumerable<Identifier> permittedConsoleCommands)
         {
             List<DebugConsole.Command> permittedCommands = new List<DebugConsole.Command>();
-            foreach (string commandName in permittedConsoleCommands)
+            foreach (Identifier commandName in permittedConsoleCommands)
             {
-                var consoleCommand = DebugConsole.Commands.Find(c => c.names.Contains(commandName));
+                var consoleCommand = DebugConsole.Commands.Find(c => c.Names.Contains(commandName));
                 if (consoleCommand != null)
                 {
                     permittedCommands.Add(consoleCommand);

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Linq;
 
 namespace Barotrauma
 {
@@ -214,7 +215,9 @@ namespace Barotrauma
                 }
                 else
                 {
-                    if (Math.Sign(flowTargetHull.Rect.Y - rect.Y) != Math.Sign(lerpedFlowForce.Y)) { return; }
+                    //do not emit particles unless water is flowing towards the target hull
+                    //(using lerpedFlowForce smooths out "flickers" when the direction of flow is rapidly changing)
+                    if (Math.Sign(flowTargetHull.WorldPosition.Y - WorldPosition.Y) != Math.Sign(lerpedFlowForce.Y)) { return; }
 
                     float particlesPerSec = Math.Max(open * rect.Width * particleAmountMultiplier, 10.0f);
                     float emitInterval = 1.0f / particlesPerSec;
@@ -319,6 +322,45 @@ namespace Barotrauma
             {
                 return IsHorizontal ? rect.Height : rect.Width;
             }
+        }
+
+        public override void UpdateEditing(Camera cam, float deltaTime)
+        {
+            if (editingHUD == null || editingHUD.UserData != this)
+            {
+                editingHUD = CreateEditingHUD();
+            }
+        }
+        private GUIComponent CreateEditingHUD(bool inGame = false)
+        {
+            editingHUD = new GUIFrame(new RectTransform(new Vector2(0.3f, 0.15f), GUI.Canvas, Anchor.CenterRight) { MinSize = new Point(400, 0) })
+            {
+                UserData = this
+            };
+
+            var paddedFrame = new GUILayoutGroup(new RectTransform(new Vector2(0.9f, 0.85f), editingHUD.RectTransform, Anchor.Center))
+            {
+                Stretch = true,
+                AbsoluteSpacing = (int)(GUI.Scale * 5)
+            };
+
+            new GUITextBlock(new RectTransform(new Vector2(1.0f, 0.2f), paddedFrame.RectTransform), TextManager.Get("entityname.gap"), font: GUIStyle.LargeFont);
+            var hiddenInGameTickBox = new GUITickBox(new RectTransform(new Vector2(0.5f, 1.0f), paddedFrame.RectTransform), TextManager.Get("sp.hiddeningame.name"))
+            {
+                Selected = HiddenInGame
+            };
+            hiddenInGameTickBox.OnSelected += (GUITickBox tickbox) =>
+            {
+                HiddenInGame = tickbox.Selected;
+                return true;
+            };
+            editingHUD.RectTransform.Resize(new Point(
+                editingHUD.Rect.Width,
+                (int)(paddedFrame.Children.Sum(c => c.Rect.Height + paddedFrame.AbsoluteSpacing) / paddedFrame.RectTransform.RelativeSize.Y * 1.25f)));
+
+            PositionEditingHUD();
+
+            return editingHUD;
         }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using Barotrauma.Items.Components;
 using Barotrauma.Networking;
 using Microsoft.Xna.Framework;
@@ -20,9 +22,11 @@ namespace Barotrauma
             ApplyStatusEffect = 7,
             Upgrade = 8,
             ItemStat = 9,
-            
+            DroppedStack = 10,
+            SetHighlight = 11,
+
             MinValue = 0,
-            MaxValue = 9
+            MaxValue = 11
         }
 
         public interface IEventData : NetEntityEvent.IData
@@ -47,10 +51,12 @@ namespace Barotrauma
         {
             public EventType EventType => EventType.InventoryState;
             public readonly ItemContainer Component;
+            public readonly Range SlotRange;
             
-            public InventoryStateEventData(ItemContainer component)
+            public InventoryStateEventData(ItemContainer component, Range slotRange)
             {
                 Component = component;
+                SlotRange = slotRange;
             }
         }
 
@@ -62,6 +68,10 @@ namespace Barotrauma
 
             public ChangePropertyEventData(SerializableProperty serializableProperty, ISerializableEntity entity)
             {
+                if (serializableProperty.GetAttribute<Editable>() == null)
+                {
+                    DebugConsole.ThrowError($"Attempted to create {nameof(ChangePropertyEventData)} for the non-editable property {serializableProperty.Name}.");
+                }
                 SerializableProperty = serializableProperty;
                 Entity = entity;
             }
@@ -71,9 +81,9 @@ namespace Barotrauma
         {
             public EventType EventType => EventType.ItemStat;
 
-            public readonly Dictionary<ItemStatManager.TalentStatIdentifier, float> Stats;
+            public readonly Dictionary<TalentStatIdentifier, float> Stats;
 
-            public SetItemStatEventData(Dictionary<ItemStatManager.TalentStatIdentifier, float> stats)
+            public SetItemStatEventData(Dictionary<TalentStatIdentifier, float> stats)
             {
                 Stats = stats;
             }
@@ -82,11 +92,25 @@ namespace Barotrauma
         private readonly struct ItemStatusEventData : IEventData
         {
             public EventType EventType => EventType.Status;
+
+            public readonly bool LoadingRound;
+
+            public ItemStatusEventData(bool loadingRound)
+            {
+                LoadingRound = loadingRound;
+            }
         }
         
         private readonly struct AssignCampaignInteractionEventData : IEventData
         {
             public EventType EventType => EventType.AssignCampaignInteraction;
+
+            public readonly ImmutableArray<Client> TargetClients;
+
+            public AssignCampaignInteractionEventData(IEnumerable<Client> targetClients)
+            {
+                TargetClients = (targetClients ?? Enumerable.Empty<Client>()).ToImmutableArray();
+            }
         }
 
         public readonly struct ApplyStatusEffectEventData : IEventData

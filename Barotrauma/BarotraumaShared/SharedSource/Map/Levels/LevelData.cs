@@ -43,6 +43,10 @@ namespace Barotrauma
 
         public OutpostGenerationParams ForceOutpostGenerationParams;
 
+        public SubmarineInfo ForceBeaconStation;
+
+        public SubmarineInfo ForceWreck;
+
         public bool AllowInvalidOutpost;
 
         public readonly Point Size;
@@ -66,6 +70,8 @@ namespace Barotrauma
         /// Events that have already triggered in this level and can never trigger again. <see cref="EventSet.OncePerLevel"/>.
         /// </summary>
         public readonly List<Identifier> NonRepeatableEvents = new List<Identifier>();
+
+        public readonly Dictionary<EventSet, int> FinishedEvents = new Dictionary<EventSet, int>();
 
         /// <summary>
         /// 'Exhaustible' sets won't appear in the same level until after one world step (~10 min, see Map.ProgressWorld) has passed. <see cref="EventSet.Exhaustible"/>.
@@ -93,6 +99,11 @@ namespace Barotrauma
                 return Math.Max(Size.Y * Physics.DisplayToRealWorldRatio, Level.DefaultRealWorldCrushDepth);
             }
         }
+        
+        /// <summary>
+        /// Inclusive (matching the min an max values is accepted).
+        /// </summary>
+        public bool IsAllowedDifficulty(float minDifficulty, float maxDifficulty) => Difficulty >= minDifficulty && Difficulty <= maxDifficulty;
 
         public LevelData(string seed, float difficulty, float sizeFactor, LevelGenerationParams generationParams, Biome biome)
         {
@@ -155,6 +166,47 @@ namespace Barotrauma
             string[] nonRepeatablePrefabNames = element.GetAttributeStringArray("nonrepeatableevents", Array.Empty<string>());
             NonRepeatableEvents.AddRange(EventPrefab.Prefabs.Where(p => nonRepeatablePrefabNames.Any(n => p.Identifier == n)).Select(p => p.Identifier));
 
+            string finishedEventsName = nameof(FinishedEvents);
+            if (element.GetChildElement(finishedEventsName) is { } finishedEventsElement)
+            {
+                foreach (var childElement in finishedEventsElement.GetChildElements(finishedEventsName))
+                {
+                    Identifier eventSetIdentifier = childElement.GetAttributeIdentifier("set", Identifier.Empty);
+                    if (eventSetIdentifier.IsEmpty) { continue; }
+                    if (!EventSet.Prefabs.TryGet(eventSetIdentifier, out EventSet eventSet))
+                    {
+                        foreach (var prefab in EventSet.Prefabs)
+                        {
+                            if (FindSetRecursive(prefab, eventSetIdentifier) is { } foundSet)
+                            {
+                                eventSet = foundSet;
+                                break;
+                            }
+                        }
+                    }
+                    if (eventSet is null) { continue; }
+                    int count = childElement.GetAttributeInt("count", 0);
+                    if (count < 1) { continue; }
+                    FinishedEvents.TryAdd(eventSet, count);
+                }
+
+                static EventSet FindSetRecursive(EventSet parentSet, Identifier setIdentifier)
+                {
+                    foreach (var childSet in parentSet.ChildSets)
+                    {
+                        if (childSet.Identifier == setIdentifier)
+                        {
+                            return childSet;
+                        }
+                        if (FindSetRecursive(childSet, setIdentifier) is { } foundSet)
+                        {
+                            return foundSet;
+                        }
+                    }
+                    return null;
+                }
+            }
+
             EventsExhausted = element.GetAttributeBool(nameof(EventsExhausted).ToLower(), false);
         }
 
@@ -198,7 +250,7 @@ namespace Barotrauma
         /// </summary>
         public LevelData(Location location, Map map, float difficulty)
         {
-            Seed = location.BaseName + map.Locations.IndexOf(location);
+            Seed = location.NameIdentifier.Value + map.Locations.IndexOf(location);
             Biome = location.Biome;
             Type = LevelType.Outpost;
             Difficulty = difficulty;
@@ -318,6 +370,18 @@ namespace Barotrauma
                 if (NonRepeatableEvents.Any())
                 {
                     newElement.Add(new XAttribute("nonrepeatableevents", string.Join(',', NonRepeatableEvents)));
+                }
+                if (FinishedEvents.Any())
+                {
+                    var finishedEventsElement = new XElement(nameof(FinishedEvents));
+                    foreach (var (set, count) in FinishedEvents)
+                    {
+                        var element = new XElement(nameof(FinishedEvents),
+                            new XAttribute("set", set.Identifier),
+                            new XAttribute("count", count));
+                        finishedEventsElement.Add(element);
+                    }
+                    newElement.Add(finishedEventsElement);
                 }
             }
 

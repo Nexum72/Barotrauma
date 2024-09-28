@@ -23,9 +23,8 @@ namespace Barotrauma
 
         public CharacterTalent(TalentPrefab talentPrefab, Character character)
         {
-            Character = character;
-
-            Prefab = talentPrefab;
+            Character = character ?? throw new ArgumentNullException(nameof(character));
+            Prefab = talentPrefab ?? throw new ArgumentNullException(nameof(talentPrefab));
             var element = talentPrefab.ConfigElement;
             DebugIdentifier = talentPrefab.OriginalName;
 
@@ -46,7 +45,8 @@ namespace Barotrauma
                         }
                         else
                         {
-                            DebugConsole.ThrowError($"No recipe identifier defined for talent {DebugIdentifier}");
+                            DebugConsole.ThrowError($"No recipe identifier defined for talent {DebugIdentifier}",
+                                contentPackage: element.ContentPackage);
                         }
                         break;
                     case "addedstoreitem":
@@ -56,7 +56,8 @@ namespace Barotrauma
                         }
                         else
                         {
-                            DebugConsole.ThrowError($"No store item identifier defined for talent {DebugIdentifier}");
+                            DebugConsole.ThrowError($"No store item identifier defined for talent {DebugIdentifier}",
+                                contentPackage: element.ContentPackage);
                         }
                         break;
                 }
@@ -68,6 +69,29 @@ namespace Barotrauma
             foreach (var characterAbilityGroupInterval in characterAbilityGroupIntervals)
             {
                 characterAbilityGroupInterval.UpdateAbilityGroup(deltaTime);
+            }
+        }
+
+        private static readonly HashSet<Identifier> checkedNonStackableTalents = new();
+
+        /// <summary>
+        /// Checks talents for a given AbilityObject taking into account non-stackable talents.
+        /// </summary>
+        public static void CheckTalentsForCrew(IEnumerable<Character> crew, AbilityEffectType type, AbilityObject abilityObject)
+        {
+            checkedNonStackableTalents.Clear();
+            foreach (Character character in crew)
+            {
+                foreach (CharacterTalent characterTalent in character.CharacterTalents)
+                {
+                    if (!characterTalent.Prefab.AbilityEffectsStackWithSameTalent)
+                    {
+                        if (checkedNonStackableTalents.Contains(characterTalent.Prefab.Identifier)) { continue; }
+                        checkedNonStackableTalents.Add(characterTalent.Prefab.Identifier);
+                    }
+
+                    characterTalent.CheckTalent(type, abilityObject);
+                }
             }
         }
 
@@ -123,11 +147,13 @@ namespace Barotrauma
         {
             if (!Enum.TryParse(abilityEffectTypeString, true, out AbilityEffectType abilityEffectType))
             {
-                DebugConsole.ThrowError("Invalid ability effect type \"" + abilityEffectTypeString + "\" in CharacterTalent (" + characterTalent.DebugIdentifier + ")");
+                DebugConsole.ThrowError("Invalid ability effect type \"" + abilityEffectTypeString + "\" in CharacterTalent (" + characterTalent.DebugIdentifier + ")",
+                    contentPackage: characterTalent?.Prefab?.ContentPackage);
             }
             if (abilityEffectType == AbilityEffectType.Undefined)
             {
-                DebugConsole.ThrowError("Ability effect type not defined in CharacterTalent (" + characterTalent.DebugIdentifier + ")");
+                DebugConsole.ThrowError("Ability effect type not defined in CharacterTalent (" + characterTalent.DebugIdentifier + ")",
+                    contentPackage: characterTalent?.Prefab?.ContentPackage);
             }
 
             return abilityEffectType;

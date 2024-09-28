@@ -8,7 +8,7 @@
   <Preset 
     name="Moderator" 
     description="Allowed to manage round settings, kick players and access server logs." 
-    permissions="ManageRound,Kick,SelectSub,SelectMode,ManageCampaign,ConsoleCommands,ServerLog,ManageSettings,ManageMoney,ManageBotTalents">
+    permissions="ManageRound,Kick,SelectSub,SelectMode,ManageCampaign,ConsoleCommands,ServerLog,ManageSettings,ManageMoney,ManageBotTalents,SpamImmunity">
     <Command name="clientlist"/>
     <Command name="readycheck"/>
     <Command name="autorestart"/>
@@ -34,6 +34,7 @@
     <Command name="togglekarmatestmode"/>
     <Command name="respawnnow"/>
     <Command name="traitorlist"/>
+    <Command name="setsalary"/>
   </Preset>
 
   <Preset 
@@ -96,5 +97,6 @@
     <Command name="togglecampaignteleport"/>
     <Command name="respawnnow"/>
     <Command name="traitorlist"/>
+    <Command name="setsalary"/>
   </Preset>
 </PermissionPresets>

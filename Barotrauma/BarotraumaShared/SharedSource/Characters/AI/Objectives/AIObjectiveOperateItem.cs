@@ -13,7 +13,8 @@ namespace Barotrauma
 
         public override bool AllowAutomaticItemUnequipping => true;
         public override bool AllowMultipleInstances => true;
-        public override bool AllowInAnySub => true;
+        protected override bool AllowInAnySub => true;
+        protected override bool AllowWhileHandcuffed => false;
         public override bool PrioritizeIfSubObjectivesActive => component != null && (component is Reactor || component is Turret);
 
         private readonly ItemComponent component, controller;
@@ -28,7 +29,12 @@ namespace Barotrauma
         /// </summary>
         public Func<PathNode, bool> EndNodeFilter;
 
-        public bool Override { get; set; } = true;
+        public bool Override { get; init; } = true;
+        
+        /// <summary>
+        /// When true, the operate objective is never completed, unless it's abandoned.
+        /// </summary>
+        public bool Repeat { get; init; }
 
         public override bool CanBeCompleted => base.CanBeCompleted && (!useController || controller != null);
 
@@ -47,10 +53,9 @@ namespace Barotrauma
         protected override float GetPriority()
         {
             bool isOrder = objectiveManager.IsOrder(this);
-            if (!IsAllowed || character.LockHands)
+            if (!IsAllowed)
             {
-                Priority = 0;
-                Abandon = !isOrder;
+                HandleDisallowed();
                 return Priority;
             }
             if (!isOrder && component.Item.ConditionPercentage <= 0)
@@ -122,7 +127,7 @@ namespace Barotrauma
                 else if (!isOrder)
                 {
                     var steering = component?.Item.GetComponent<Steering>();
-                    if (steering != null && (steering.AutoPilot || HumanAIController.IsTrueForAnyCrewMember(c => c != HumanAIController && c.Character.IsCaptain)))
+                    if (steering != null && (steering.AutoPilot || HumanAIController.IsTrueForAnyCrewMember(c => c != character && c.IsCaptain, onlyActive: true, onlyConnectedSubs: true)))
                     {
                         // Ignore if already set to autopilot or if there's a captain onboard
                         Priority = 0;
@@ -204,13 +209,17 @@ namespace Barotrauma
             }
             if (operateTarget != null)
             {
-                if (HumanAIController.IsTrueForAnyCrewMember(other => other != HumanAIController && other.Character.IsBot && other.ObjectiveManager.GetActiveObjective() is AIObjectiveOperateItem operateObjective && operateObjective.operateTarget == operateTarget))
+                if (HumanAIController.IsTrueForAnyBotInTheCrew(other => other != HumanAIController && other.ObjectiveManager.GetActiveObjective() is AIObjectiveOperateItem operateObjective && operateObjective.operateTarget == operateTarget))
                 {
                     // Another crew member is already targeting this entity (leak).
                     Abandon = true;
                     return;
                 }
             }
+
+            //the character shouldn't be grabbing anyone if it's trying to operate an item
+            character.SelectedCharacter = null;
+
             if (target.CanBeSelected)
             {
                 if (!character.IsClimbing && character.CanInteractWith(target.Item, out _, checkLinked: false))
@@ -303,7 +312,7 @@ namespace Barotrauma
             }
         }
 
-        protected override bool CheckObjectiveSpecific() => isDoneOperating && !IsLoop;
+        protected override bool CheckObjectiveSpecific() => isDoneOperating && !Repeat;
 
         public override void Reset()
         {

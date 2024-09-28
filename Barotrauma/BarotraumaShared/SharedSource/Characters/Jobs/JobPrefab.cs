@@ -13,7 +13,14 @@ namespace Barotrauma
         public readonly Identifier Identifier;
         public readonly Identifier Option;
         public readonly float PriorityModifier;
+        /// <summary>
+        /// The order is ignored in outpost levels. Doesn't apply to outpost NPCs.
+        /// </summary>
         public readonly bool IgnoreAtOutpost;
+        /// <summary>
+        /// The order is ignored in "normal" non-outpost levels
+        /// </summary>
+        public readonly bool IgnoreAtNonOutpost;
 
         public AutonomousObjective(XElement element)
         {
@@ -29,6 +36,7 @@ namespace Barotrauma
             PriorityModifier = element.GetAttributeFloat("prioritymodifier", 1);
             PriorityModifier = MathHelper.Max(PriorityModifier, 0);
             IgnoreAtOutpost = element.GetAttributeBool("ignoreatoutpost", false);
+            IgnoreAtNonOutpost = element.GetAttributeBool("ignoreatnonoutpost", false);
         }
     }
 
@@ -43,14 +51,15 @@ namespace Barotrauma
             Priority = element.GetAttributeFloat("priority", -1f);
             if (Priority < 0)
             {
-                DebugConsole.AddWarning($"The 'priority' attribute is missing from the the item repair priorities definition in {element} of {file.Path}.");
+                DebugConsole.AddWarning($"The 'priority' attribute is missing from the the item repair priorities definition in {element} of {file.Path}.",
+                    ContentPackage);
             }
         }
 
         public override void Dispose() { }
     }
 
-    class JobVariant
+    internal class JobVariant
     {
         public JobPrefab Prefab;
         public int Variant;
@@ -113,7 +122,7 @@ namespace Barotrauma
 
         public readonly LocalizedString Name;
 
-        [Serialize(AIObjectiveIdle.BehaviorType.Passive, IsPropertySaveable.No)]
+        [Serialize(AIObjectiveIdle.BehaviorType.Passive, IsPropertySaveable.No, description: "How should the character behave when idling (not doing any particular task)?")]
         public AIObjectiveIdle.BehaviorType IdleBehavior
         {
             get;
@@ -122,78 +131,63 @@ namespace Barotrauma
 
         public readonly LocalizedString Description;
 
-        [Serialize(false, IsPropertySaveable.No)]
+        [Serialize(false, IsPropertySaveable.No, description: "Can the character speak any random lines, or just ones specifically meant for the job?")]
         public bool OnlyJobSpecificDialog
         {
             get;
             private set;
         }
 
-        //the number of these characters in the crew the player starts with in the single player campaign
-        [Serialize(0, IsPropertySaveable.No)]
+        [Serialize(0, IsPropertySaveable.No, description: "The number of these characters in the crew the player starts with in the single player campaign.")]
         public int InitialCount
         {
             get;
             private set;
         }
 
-        //if set to true, a client that has chosen this as their preferred job will get it no matter what
-        [Serialize(false, IsPropertySaveable.No)]
+        [Serialize(false, IsPropertySaveable.No, description: "If set to true, a client that has chosen this as their preferred job will get it regardless of the maximum number or the amount of spawnpoints in the sub.")]
         public bool AllowAlways
         {
             get;
             private set;
         }
 
-        //how many crew members can have the job (only one captain etc) 
-        [Serialize(100, IsPropertySaveable.No)]
+        [Serialize(100, IsPropertySaveable.No, description: "How many crew members can have the job (e.g. only one captain etc).")]
         public int MaxNumber
         {
             get;
             private set;
         }
 
-        //how many crew members are REQUIRED to have the job 
-        //(i.e. if one captain is required, one captain is chosen even if all the players have set captain to lowest preference)
-        [Serialize(0, IsPropertySaveable.No)]
+        [Serialize(0, IsPropertySaveable.No, description: "How many crew members are required to have the job. I.e. if one captain is required, one captain is chosen even if all the players have set captain to lowest preference.")]
         public int MinNumber
         {
             get;
             private set;
         }
 
-        [Serialize(0.0f, IsPropertySaveable.No)]
+        [Serialize(0.0f, IsPropertySaveable.No, description: "Minimum amount of karma a player must have to get assigned this job.")]
         public float MinKarma
         {
             get;
             private set;
         }
 
-        [Serialize(1.0f, IsPropertySaveable.No)]
+        [Serialize(1.0f, IsPropertySaveable.No, description: "Multiplier on the base hiring cost when hiring the character from an outpost.")]
         public float PriceMultiplier
         {
             get;
             private set;
         }
 
-        // TODO: not used
-        [Serialize(10.0f, IsPropertySaveable.No)]
-        public float Commonness
-        {
-            get;
-            private set;
-        }
-
-        //how much the vitality of the character is increased/reduced from the default value
-        [Serialize(0.0f, IsPropertySaveable.No)]
+        [Serialize(0.0f, IsPropertySaveable.No, description: "How much the vitality of the character is increased/reduced from the default value (e.g. 10 = 110 total vitality if the default vitality is 100.).")]
         public float VitalityModifier
         {
             get;
             private set;
         }
 
-        //whether the job should be available to NPCs
-        [Serialize(false, IsPropertySaveable.No)]
+        [Serialize(false, IsPropertySaveable.No, description: "Hidden jobs are not selectable by players, but can be used by e.g. outpost NPCs.")]
         public bool HiddenJob
         {
             get;
@@ -258,14 +252,14 @@ namespace Barotrauma
                 {
                     if (itemElement.Element("name") != null)
                     {
-                        DebugConsole.ThrowError("Error in job config \"" + Name + "\" - use identifiers instead of names to configure the items.");
+                        DebugConsole.ThrowErrorLocalized("Error in job config \"" + Name + "\" - use identifiers instead of names to configure the items.");
                         continue;
                     }
 
                     Identifier itemIdentifier = itemElement.GetAttributeIdentifier("identifier", Identifier.Empty);
                     if (itemIdentifier.IsEmpty)
                     {
-                        DebugConsole.ThrowError("Error in job config \"" + Name + "\" - item with no identifier.");
+                        DebugConsole.ThrowErrorLocalized("Error in job config \"" + Name + "\" - item with no identifier.");
                     }
                     else
                     {

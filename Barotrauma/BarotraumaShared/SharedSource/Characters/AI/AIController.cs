@@ -76,9 +76,9 @@ namespace Barotrauma
             get { return Character.AnimController.Collider.LinearVelocity; }
         }
 
-        public virtual bool CanEnterSubmarine
+        public virtual CanEnterSubmarine CanEnterSubmarine
         {
-            get { return true; }
+            get { return Character.AnimController.CanEnterSubmarine; }
         }
 
         public virtual bool CanFlip
@@ -91,14 +91,16 @@ namespace Barotrauma
         private IEnumerable<Hull> visibleHulls;
         private float hullVisibilityTimer;
         const float hullVisibilityInterval = 0.5f;
+
+        /// <summary>
+        /// Returns hulls that are visible to the character, including the current hull. 
+        /// Note that this is not an accurate visibility check, it only checks for open gaps between the adjacent and linked hulls.
+        /// </summary>
         public IEnumerable<Hull> VisibleHulls
         {
             get
             {
-                if (visibleHulls == null)
-                {
-                    visibleHulls = Character.GetVisibleHulls();
-                }
+                visibleHulls ??= Character.GetVisibleHulls();
                 return visibleHulls;
             }
             private set
@@ -107,12 +109,26 @@ namespace Barotrauma
             }
         }
 
-        public bool HasValidPath(bool requireNonDirty = false, bool requireUnfinished = true) => 
-            steeringManager is IndoorsSteeringManager pathSteering &&
-            pathSteering.CurrentPath != null &&
-            (!requireUnfinished || !pathSteering.CurrentPath.Finished) &&
-            !pathSteering.CurrentPath.Unreachable &&
-            (!requireNonDirty || !pathSteering.IsPathDirty);
+        /// <summary>
+        /// Is the current path valid, using the provided parameters.
+        /// </summary>
+        /// <param name="requireNonDirty"></param>
+        /// <param name="requireUnfinished"></param>
+        /// <param name="nodePredicate"></param>
+        /// <returns>When <paramref name="nodePredicate"/> is defined, returns false if any of the nodes fails to match the predicate.</returns>
+        public bool HasValidPath(bool requireNonDirty = true, bool requireUnfinished = true, Func<WayPoint, bool> nodePredicate = null)
+        {
+            if (SteeringManager is not IndoorsSteeringManager pathSteering) { return false; }
+            if (pathSteering.CurrentPath == null) { return false; }
+            if (pathSteering.CurrentPath.Unreachable) { return false; }
+            if (requireUnfinished && pathSteering.CurrentPath.Finished) { return false; }
+            if (requireNonDirty && pathSteering.IsPathDirty) { return false; }
+            if (nodePredicate != null)
+            {
+                return pathSteering.CurrentPath.Nodes.All(n => nodePredicate(n));
+            }
+            return true;
+        }
 
         public bool IsCurrentPathNullOrUnreachable => IsCurrentPathUnreachable || steeringManager is IndoorsSteeringManager pathSteering && pathSteering.CurrentPath == null;
         public bool IsCurrentPathUnreachable => steeringManager is IndoorsSteeringManager pathSteering && !pathSteering.IsPathDirty && pathSteering.CurrentPath != null && pathSteering.CurrentPath.Unreachable;
@@ -251,7 +267,7 @@ namespace Barotrauma
         }
 
         private readonly HashSet<Item> unequippedItems = new HashSet<Item>();
-        public bool TakeItem(Item item, CharacterInventory targetInventory, bool equip, bool wear = false, bool dropOtherIfCannotMove = true, bool allowSwapping = false, bool storeUnequipped = false)
+        public bool TakeItem(Item item, CharacterInventory targetInventory, bool equip, bool wear = false, bool dropOtherIfCannotMove = true, bool allowSwapping = false, bool storeUnequipped = false, IEnumerable<Identifier> targetTags = null)
         {
             var pickable = item.GetComponent<Pickable>();
             if (pickable == null) { return false; }
@@ -265,23 +281,28 @@ namespace Barotrauma
             }
             else
             {
-                var holdable = item.GetComponent<Holdable>();
-                if (holdable != null)
-                {
-                    pickable = holdable;
-                }
+                // Not allowed to wear -> don't use the Wearable component even when it's found.
+                pickable = item.GetComponent<Holdable>();
             }
             if (item.ParentInventory is ItemInventory itemInventory)
             {
                 if (!itemInventory.Container.HasRequiredItems(Character, addMessage: false)) { return false; }
             }
-            if (equip)
+            if (equip && pickable != null)
             {
                 int targetSlot = -1;
                 //check if all the slots required by the item are free
                 foreach (InvSlotType slots in pickable.AllowedSlots)
                 {
                     if (slots.HasFlag(InvSlotType.Any)) { continue; }
+                    if (!wear)
+                    {
+                        if (slots != InvSlotType.RightHand && slots != InvSlotType.LeftHand && slots != (InvSlotType.RightHand | InvSlotType.LeftHand))
+                        {
+                            // Don't allow other than hand slots if not allowed to wear.
+                            continue;
+                        }
+                    }
                     for (int i = 0; i < targetInventory.Capacity; i++)
                     {
                         if (targetInventory is CharacterInventory characterInventory)
@@ -294,7 +315,7 @@ namespace Barotrauma
                         var otherItem = targetInventory.GetItemAt(i);
                         if (otherItem == null) { continue; }
                         //try to move the existing item to LimbSlot.Any and continue if successful
-                        if (otherItem.AllowedSlots.Contains(InvSlotType.Any) && targetInventory.TryPutItem(otherItem, Character, CharacterInventory.anySlot))
+                        if (otherItem.AllowedSlots.Contains(InvSlotType.Any) && targetInventory.TryPutItem(otherItem, Character, CharacterInventory.AnySlot))
                         {
                             if (storeUnequipped && targetInventory.Owner == Character)
                             {
@@ -304,17 +325,36 @@ namespace Barotrauma
                         }
                         if (dropOtherIfCannotMove)
                         {
+                            if (otherItem.Prefab.Identifier == item.Prefab.Identifier || otherItem.HasIdentifierOrTags(targetTags))
+                            {
+                                bool switchingToBetterSuit =
+                                    targetTags != null &&
+                                    targetTags.FirstOrDefault() == Tags.HeavyDivingGear &&
+                                    AIObjectiveFindDivingGear.IsSuitablePressureProtection(item, Tags.HeavyDivingGear, Character) &&
+                                    !AIObjectiveFindDivingGear.IsSuitablePressureProtection(otherItem, Tags.HeavyDivingGear, Character);
+                                // Shouldn't try dropping identical items, because that causes infinite looping when trying to get multiple items
+                                // of the same type and if can't fit them all in the inventory.
+                                if (!switchingToBetterSuit)
+                                {
+                                    return false;
+                                }
+                            }
                             //if everything else fails, simply drop the existing item
                             otherItem.Drop(Character);
                         }
                     }
                 }
                 if (targetSlot < 0) { return false; }
+                //the item should always stay in the Any slot if it's containable in one
+                if (pickable.AllowedSlots.Contains(InvSlotType.Any))
+                {
+                    targetInventory.TryPutItem(item, Character, CharacterInventory.AnySlot);
+                }
                 return targetInventory.TryPutItem(item, targetSlot, allowSwapping, allowCombine: false, Character);
             }
             else
             {
-                return targetInventory.TryPutItem(item, Character, CharacterInventory.anySlot);
+                return targetInventory.TryPutItem(item, Character, CharacterInventory.AnySlot);
             }
         }
 
@@ -327,7 +367,7 @@ namespace Barotrauma
         public static void UnequipContainedItems(Character character, Item parentItem, Func<Item, bool> predicate, bool avoidDroppingInSea = true, int? unequipMax = null)
         {
             var inventory = parentItem.OwnInventory;
-            if (inventory == null) { return; }
+            if (inventory == null || !inventory.Container.DrawInventory) { return; }
             int removed = 0;
             if (predicate == null || inventory.AllItems.Any(predicate))
             {
@@ -339,7 +379,7 @@ namespace Barotrauma
                         if (avoidDroppingInSea && !character.IsInFriendlySub)
                         {
                             // If we are not inside a friendly sub (= same team), try to put the item in the inventory instead dropping it.
-                            if (character.Inventory.TryPutItem(containedItem, character, CharacterInventory.anySlot))
+                            if (character.Inventory.TryPutItem(containedItem, character, CharacterInventory.AnySlot))
                             {
                                 if (unequipMax.HasValue && ++removed >= unequipMax) { return; }
                                 continue;
@@ -401,14 +441,9 @@ namespace Barotrauma
                         var door = gap.ConnectedDoor;
                         if (door != null)
                         {
-                            if (!door.CanBeTraversed)
+                            if (!pathSteering.CanAccessDoor(door))
                             {
-                                if (!door.HasAccess(Character))
-                                {
-                                    if (!canAttackDoors) { continue; }
-                                    // Treat doors that don't have access to like they were farther, because it will take time to break them.
-                                    multiplier = 5;
-                                }
+                                continue;
                             }
                         }
                         else
@@ -449,9 +484,10 @@ namespace Barotrauma
                 Vector2 diff = EscapeTarget.WorldPosition - Character.WorldPosition;
                 float sqrDist = diff.LengthSquared();
                 bool isClose = sqrDist < MathUtils.Pow2(100);
-                if (Character.CurrentHull == null || isClose && !isClosedDoor || pathSteering == null || IsCurrentPathNullOrUnreachable || IsCurrentPathFinished)
+                if (Character.CurrentHull == null || (isClose && !isClosedDoor) || pathSteering == null || IsCurrentPathUnreachable || IsCurrentPathFinished)
                 {
                     // Very close to the target, outside, or at the end of the path -> try to steer through the gap
+                    Character.ReleaseSecondaryItem();
                     SteeringManager.Reset();
                     pathSteering?.ResetPath();
                     Vector2 dir = Vector2.Normalize(diff);
@@ -504,8 +540,5 @@ namespace Barotrauma
 
         protected virtual void OnStateChanged(AIState from, AIState to) { }
         protected virtual void OnTargetChanged(AITarget previousTarget, AITarget newTarget) { }
-
-        public virtual void ClientRead(IReadMessage msg) { }
-        public virtual void ServerWrite(IWriteMessage msg) { }
     }
 }

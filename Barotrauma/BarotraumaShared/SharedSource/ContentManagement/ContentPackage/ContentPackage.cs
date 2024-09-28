@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -22,7 +23,7 @@ namespace Barotrauma
                        : string.Empty);
         }
 
-        public static readonly Version MinimumHashCompatibleVersion = new Version(0, 18, 13, 0);
+        public static readonly Version MinimumHashCompatibleVersion = new Version(1, 1, 0, 0);
         
         public const string LocalModsDir = "LocalMods";
         public static readonly string WorkshopModsDir = Barotrauma.IO.Path.Combine(
@@ -71,9 +72,9 @@ namespace Barotrauma
             if (ugcId is not SteamWorkshopId steamWorkshopId) { return true; }
             if (!InstallTime.TryUnwrap(out var installTime)) { return true; }
             
-            Steamworks.Ugc.Item? item = await SteamManager.Workshop.GetItem(steamWorkshopId.Value);
-            if (item is null) { return true; }
-            return item.Value.LatestUpdateTime <= installTime.ToUtcValue();
+            Option<Steamworks.Ugc.Item> itemOption = await SteamManager.Workshop.GetItem(steamWorkshopId.Value);
+            if (!itemOption.TryUnwrap(out var item)) { return true; }
+            return item.LatestUpdateTime <= installTime.ToUtcValue();
         }
 
         public int Index => ContentPackageManager.EnabledPackages.IndexOf(this);
@@ -109,6 +110,7 @@ namespace Barotrauma
             InstallTime = rootElement.GetAttributeDateTime("installtime");
 
             var fileResults = rootElement.Elements()
+                .Where(e => !ContentFile.IsLegacyContentType(e, this, logWarning: true))
                 .Select(e => ContentFile.CreateFromXElement(this, e))
                 .ToArray();
 
@@ -176,7 +178,7 @@ namespace Barotrauma
             }
         }
 
-        public Md5Hash CalculateHash(bool logging = false)
+        public Md5Hash CalculateHash(bool logging = false, string? name = null, string? modVersion = null)
         {
             using IncrementalHash incrementalHash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
             
@@ -203,7 +205,14 @@ namespace Barotrauma
                     break;
                 }             
             }
-            
+
+            string selectedName = name ?? Name;
+            if (!selectedName.IsNullOrEmpty())
+            {
+                incrementalHash.AppendData(Encoding.UTF8.GetBytes(selectedName));
+            }
+            incrementalHash.AppendData(Encoding.UTF8.GetBytes(modVersion ?? ModVersion));
+
             var md5Hash = Md5Hash.BytesAsHash(incrementalHash.GetHashAndReset());
             if (logging)
             {
@@ -274,7 +283,7 @@ namespace Barotrauma
                     catch (Exception e)
                     {
                         var innermost = e.GetInnermost();
-                        DebugConsole.LogError($"Failed to load \"{filesToLoad[i].Path}\": {innermost.Message}\n{innermost.StackTrace}");
+                        DebugConsole.LogError($"Failed to load \"{filesToLoad[i].Path}\": {innermost.Message}\n{innermost.StackTrace}", contentPackage: this);
                         exception = e;
                     }
                     if (exception != null)
@@ -329,6 +338,7 @@ namespace Barotrauma
             XElement rootElement = doc.Root ?? throw new NullReferenceException("XML document is invalid: root element is null.");
             
             var fileResults = rootElement.Elements()
+                .Where(e => !ContentFile.IsLegacyContentType(e, this, logWarning: true))
                 .Select(e => ContentFile.CreateFromXElement(this, e))
                 .ToArray();
 
@@ -381,7 +391,8 @@ namespace Barotrauma
 
             DebugConsole.AddWarning(
                 $"The following errors occurred while loading the content package \"{Name}\". The package might not work correctly.\n" +
-                string.Join('\n', FatalLoadErrors.Select(errorToStr)));
+                string.Join('\n', FatalLoadErrors.Select(errorToStr)),
+                this);
 
             static string errorToStr(LoadError error)
                 => error.ToString();
