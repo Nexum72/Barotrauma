@@ -196,6 +196,8 @@ namespace Barotrauma.Networking
                 //the byte indicates the direction we're changing the value, subtract one to get negative values from a byte
                 TraitorDangerLevel = TraitorDangerLevel + incMsg.ReadByte() - 1;
 
+                ExperienceMultiplier = incMsg.ReadSingle();
+
                 changed |= true;
                 UpdateFlag(NetFlags.Misc);
             }
@@ -234,6 +236,8 @@ namespace Barotrauma.Networking
 
             doc.Root.SetAttributeValue("enableupnp", EnableUPnP);
             doc.Root.SetAttributeValue("autorestart", autoRestart);
+            
+            doc.Root.SetAttributeValue("ExperienceMultiplier", ExperienceMultiplier);
 
             doc.Root.SetAttributeValue("ServerMessage", ServerMessageText);
 
@@ -290,6 +294,8 @@ namespace Barotrauma.Networking
             }
 
             AutoRestart = doc.Root.GetAttributeBool("autorestart", false);
+
+            ExperienceMultiplier = doc.Root.GetAttributeFloat("ExperienceMultiplier", 1f);
                         
             AllowSubVoting = SubSelectionMode == SelectionMode.Vote;            
             AllowModeVoting = ModeSelectionMode == SelectionMode.Vote;
@@ -385,6 +391,7 @@ namespace Barotrauma.Networking
             GameMain.NetLobbyScreen.MissionTypeName = MissionType;
 
             GameMain.NetLobbyScreen.SetBotSpawnMode(BotSpawnMode);
+            GameMain.NetLobbyScreen.SetExperienceMultiplier(ExperienceMultiplier);
             GameMain.NetLobbyScreen.SetBotCount(BotCount);
 
             MonsterEnabled ??= CharacterPrefab.Prefabs.Select(p => (p.Identifier, true)).ToDictionary();

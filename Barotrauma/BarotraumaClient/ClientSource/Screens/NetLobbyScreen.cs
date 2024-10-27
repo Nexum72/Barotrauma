@@ -45,7 +45,7 @@ namespace Barotrauma
 
         public GUIButton QuitCampaignButton { get; private set; }
 
-        public GUINumberInput ExperienceMultiplier;
+        public GUIScrollBar experienceMultiplierSlider;
 
         private GUITickBox[] missionTypeTickBoxes;
         private GUIListBox missionTypeList;
@@ -842,7 +842,24 @@ namespace Barotrauma
                 botSpawnModeSelection.Enabled = GameMain.Client.ServerSettings.BotCount > 0;
                 GameMain.Client?.ServerSettings.ClientAdminWrite(ServerSettings.NetFlags.Properties);
             };
+            
+            //experience multiplier ----------------------------------------------------------------
 
+            CreateSubHeader("ExperienceSettings", settingsContent);
+            
+            var experienceMultiplierHolder = CreateLabeledSlider(settingsContent, "ExperienceMultiplier", "", "ExperienceMultiplierExplanation", out experienceMultiplierSlider, out var experienceMultiplierText,
+                step: 0.1f, range: new Vector2(1.0f, 10.0f));
+            experienceMultiplierSlider.OnMoved = (scrollbar, value) =>
+            {
+                experienceMultiplierText.Text = value.ToString("0.0");
+                experienceMultiplierText.TextColor = ToolBox.GradientLerp(scrollbar.BarScroll, GUIStyle.Yellow, GUIStyle.Green);
+                return true;
+            };
+            experienceMultiplierSlider.OnMoved(experienceMultiplierSlider, experienceMultiplierSlider.BarScroll);
+            experienceMultiplierSlider.OnReleased += (scrollbar, value) => { GameMain.Client?.ServerSettings.ClientAdminWrite(ServerSettings.NetFlags.Misc, experienceMultiplier: value); return true; };
+            AssignComponentToServerSetting(experienceMultiplierSlider, nameof(ServerSettings.ExperienceMultiplier));
+            clientDisabledElements.AddRange(experienceMultiplierHolder.GetAllChildren());
+            
             //traitor probability ------------------------------------------------------------------
 
             CreateSubHeader("TraitorSettings", settingsContent);

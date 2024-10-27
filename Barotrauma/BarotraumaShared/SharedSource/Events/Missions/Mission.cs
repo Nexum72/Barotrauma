@@ -443,7 +443,15 @@ namespace Barotrauma
             var experienceGainMultiplier = new AbilityMissionExperienceGainMultiplier(this, 1f, character: null);
             crewCharacters.ForEach(c => experienceGainMultiplier.Value += c.GetStatValue(StatTypes.MissionExperienceGainMultiplier));
 
-            DistributeExperienceToCrew(crewCharacters, (int)(baseExperienceGain * experienceGainMultiplier.Value));
+            int experienceGain = (int)(baseExperienceGain * experienceGainMultiplier.Value);
+
+#if SERVER
+            experienceGain = (int)(experienceGain * GameMain.Server.ServerSettings.ExperienceMultiplier);
+#else
+            experienceGain = (int)(experienceGain * GameMain.Client.ServerSettings.ExperienceMultiplier);
+#endif
+            
+            DistributeExperienceToCrew(crewCharacters, experienceGain);
 
             CalculateFinalReward(Submarine.MainSub);
 #if SERVER
